@@ -210,7 +210,7 @@ namespace Chroma
       write(xml, "num_tries", input.num_tries);
       write(xml, "max_rhs", input.max_rhs);
       write(xml, "max_tslices_in_contraction", input.max_tslices_in_contraction);
-      write(xml, "max_tslices_in_contraction", input.max_moms_in_contraction);
+      write(xml, "max_moms_in_contraction", input.max_moms_in_contraction);
       write(xml, "use_genprop4_format", input.use_genprop4_format);
       write(xml, "use_multiple_writers", input.use_multiple_writers);
       write(xml, "phase", input.phase);
