@@ -361,6 +361,10 @@ namespace Chroma
 	// Creating GPU context can be expensive; so do it once
 	static std::shared_ptr<superbblas::Context> cudactx;
 	static std::shared_ptr<superbblas::Context> cpuctx;
+#  ifdef QDP_IS_QDPJIT
+	static std::mutex m;
+#  endif
+
 	if (!cpuctx)
 	  cpuctx = std::make_shared<superbblas::Context>(superbblas::createCpuContext());
 
@@ -382,6 +386,7 @@ namespace Chroma
 		  return nullptr;
 		if (plat == superbblas::CPU)
 		  return malloc(size);
+		std::lock_guard<std::mutex> g(m);
 		void* ptr = nullptr;
 		QDP_get_global_cache().addDeviceStatic(&ptr, size, true);
 		assert(superbblas::detail::getPtrDevice(ptr) >= 0);
@@ -395,7 +400,10 @@ namespace Chroma
 		if (plat == superbblas::CPU)
 		  free(ptr);
 		else
+		{
+		  std::lock_guard<std::mutex> g(m);
 		  QDP_get_global_cache().signoffViaPtr(ptr);
+		}
 	      }));
 	  }
 	  return cudactx;
