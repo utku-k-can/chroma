@@ -187,6 +187,11 @@ namespace Chroma
         read(inputtop, "use_multiple_writers", input.use_multiple_writers);
       }
 
+      input.write_on_background = false;
+      if( inputtop.count("write_on_background") == 1 ) {
+        read(inputtop, "write_on_background", input.write_on_background);
+      }
+
       input.phase.resize(Nd - 1);
       for (int i = 0; i < Nd - 1; ++i)
 	input.phase[i] = 0;
@@ -213,6 +218,7 @@ namespace Chroma
       write(xml, "max_moms_in_contraction", input.max_moms_in_contraction);
       write(xml, "use_genprop4_format", input.use_genprop4_format);
       write(xml, "use_multiple_writers", input.use_multiple_writers);
+      write(xml, "write_on_background", input.write_on_background);
       write(xml, "phase", input.phase);
 
       pop(xml);
@@ -1029,6 +1035,7 @@ namespace Chroma
       // Set how many processes are going to write elementals; each process is going to write in a
       // independent file
       bool use_multiple_writers = params.param.contract.use_multiple_writers;
+      bool write_on_background = params.param.contract.write_on_background;
 
       //
       // DB storage
@@ -1311,7 +1318,7 @@ namespace Chroma
 	      open_db(g5_con.p->procRank(), g5_con.p->numProcs());
 
 	      // Create a thread to store the tensor while doing other things
-	      store_db_th = std::thread([=, &qdp_db, &qdp4_db, &gammas, &disps, &phases]() {
+	      auto writing_fn = [=, &qdp_db, &qdp4_db, &gammas, &disps, &phases]() {
 		double t0 = -SB::w_time();
 
 		// Avoid race conditions between this thread and the main thread
@@ -1406,7 +1413,11 @@ namespace Chroma
 		t0 += SB::w_time();
 		QDPIO::cout << "Time to store " << tsize << " tslices : " << t0 << " secs"
 			    << std::endl;
-	      });
+	      };
+	      if (write_on_background)
+		store_db_th = std::thread(writing_fn);
+	      else
+		writing_fn();
 	    }
 	  }
 	  swatch.stop();

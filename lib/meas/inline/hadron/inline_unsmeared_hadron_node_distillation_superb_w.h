@@ -73,6 +73,7 @@ namespace Chroma
 	  int                       max_moms_in_contraction;/*! maximum number of contracted momenta simultaneously */
 	  bool                      use_genprop4_format;    /*!< Use the efficient genprop4 format instead of the traditional one */
 	  bool                      use_multiple_writers;   /*!< Whether several processes are going to write down the elementals on separate files */
+	  bool                      write_on_background;    /*!< Whether the writing of elementals happen on a secondary thread */
 	  multi1d<float>            phase;                   /*!< Phase to apply to colorvecs */
 	};
 
