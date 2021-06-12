@@ -1411,9 +1411,9 @@ namespace Chroma
 		      << "  time= " << swatch.getTimeInSeconds() << " secs" << std::endl;
 	} // for sink_source
       }
-      catch (const std::string& e) 
+      catch (const std::exception& e) 
       {
-	QDPIO::cout << name << ": caught exception around qprop: " << e << std::endl;
+	QDPIO::cout << name << ": caught exception: " << e.what() << std::endl;
 	QDP_abort(1);
       }
 
