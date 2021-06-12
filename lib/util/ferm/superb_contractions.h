@@ -2264,7 +2264,7 @@ namespace Chroma
     {
       /// Path Node
       struct PathNode {
-	std::map<char, PathNode> p; ///< following nodes
+	std::map<int, PathNode> p; ///< following nodes
 	int disp_index;		    ///< if >= 0, the index in the displacement list
       };
 
@@ -2276,10 +2276,10 @@ namespace Chroma
 	for (const std::vector<int>& path : paths)
 	{
 	  PathNode* n = &r;
-	  for (char d : path)
+	  for (int d : path)
 	  {
 	    if (d == 0 || std::abs(d) > Nd)
-	      throw std::runtime_error("Invalid direction: " + std::to_string((int)d));
+	      throw std::runtime_error("Invalid direction: " + std::to_string(d));
 
 	    auto it = n->p.find(d);
 	    if (it != n->p.end())
