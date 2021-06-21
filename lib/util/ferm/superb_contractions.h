@@ -371,30 +371,38 @@ namespace Chroma
 	  {
 	    int dev = -1;
 	    superbblas::detail::cudaCheck(cudaGetDevice(&dev));
-	    cudactx = std::make_shared<superbblas::Context>(superbblas::createCudaContext(
-	      dev,
+	    // Workaround on a potential issue in qdp-jit: avoid passing through the pool allocator
+	    if (jit_config_get_max_allocation() == 0)
+	    {
+	      cudactx = std::make_shared<superbblas::Context>(superbblas::createCudaContext(dev));
+	    }
+	    else
+	    {
+	      cudactx = std::make_shared<superbblas::Context>(superbblas::createCudaContext(
+		dev,
 
-	      // Make superbblas use the same memory allocator for gpu as any other qdp-jit lattice object
-	      [](std::size_t size, superbblas::platform plat) -> void* {
-		if (size == 0)
-		  return nullptr;
-		if (plat == superbblas::CPU)
-		  return malloc(size);
-		void* ptr = nullptr;
-		QDP_get_global_cache().addDeviceStatic(&ptr, size, true);
-		assert(superbblas::detail::getPtrDevice(ptr) >= 0);
-		return ptr;
-	      },
+		// Make superbblas use the same memory allocator for gpu as any other qdp-jit lattice object
+		[](std::size_t size, superbblas::platform plat) -> void* {
+		  if (size == 0)
+		    return nullptr;
+		  if (plat == superbblas::CPU)
+		    return malloc(size);
+		  void* ptr = nullptr;
+		  QDP_get_global_cache().addDeviceStatic(&ptr, size, true);
+		  assert(superbblas::detail::getPtrDevice(ptr) >= 0);
+		  return ptr;
+		},
 
-	      // The corresponding deallocator
-	      [](void* ptr, superbblas::platform plat) {
-		if (ptr == nullptr)
-		  return;
-		if (plat == superbblas::CPU)
-		  free(ptr);
-		else
-		  QDP_get_global_cache().signoffViaPtr(ptr);
-	      }));
+		// The corresponding deallocator
+		[](void* ptr, superbblas::platform plat) {
+		  if (ptr == nullptr)
+		    return;
+		  if (plat == superbblas::CPU)
+		    free(ptr);
+		  else
+		    QDP_get_global_cache().signoffViaPtr(ptr);
+		}));
+	    }
 	  }
 	  return cudactx;
 #  else
@@ -2578,17 +2586,31 @@ namespace Chroma
 	std::swap(size0, size1);
       }
 
-      // Return the shortest interval resulting from the leftmost point of the
-      // first interval and the rightmost point of both intervals, and the
-      // leftmost point of the second interval and the rightmost point of both
-      // intervals
+      // If some interval is empty, return the other
+      if (size0 == 0)
+      {
+	fromr = from1;
+	sizer = size1;
+      }
+      else if (size1 == 0)
+      {
+	fromr = from0;
+	sizer = size0;
+      }
+      else
+      {
+	// Return the shortest interval resulting from the leftmost point of the
+	// first interval and the rightmost point of both intervals, and the
+	// leftmost point of the second interval and the rightmost point of both
+	// intervals
 
-      Index fromra = from0;
-      Index sizera = std::max(from0 + size0, from1 + size1) - from0;
-      Index fromrb = from1;
-      Index sizerb = std::max(from0 + dim + size0, from1 + size1) - from1;
-      fromr = (sizera <= sizerb ? fromra : fromrb);
-      sizer = (sizera <= sizerb ? sizera : sizerb);
+	Index fromra = from0;
+	Index sizera = std::max(from0 + size0, from1 + size1) - from0;
+	Index fromrb = from1;
+	Index sizerb = std::max(from0 + dim + size0, from1 + size1) - from1;
+	fromr = (sizera <= sizerb ? fromra : fromrb);
+	sizer = (sizera <= sizerb ? sizera : sizerb);
+      }
 
       // Normalize the output if the resulting interval is the whole dimension
       if (sizer >= dim)
