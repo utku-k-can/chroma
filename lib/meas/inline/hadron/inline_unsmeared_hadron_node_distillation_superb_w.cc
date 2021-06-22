@@ -1031,11 +1031,11 @@ namespace Chroma
       //
       // DB storage
       //
-      LocalBinaryStoreDB<LocalSerialDBKey<KeyUnsmearedMesonElementalOperator_t>,
-			 LocalSerialDBData<ValUnsmearedMesonElementalOperator_t>>
+      std::vector<LocalBinaryStoreDB<LocalSerialDBKey<KeyUnsmearedMesonElementalOperator_t>,
+				     LocalSerialDBData<ValUnsmearedMesonElementalOperator_t>>>
 	qdp_db;
-      LocalBinaryStoreDB<LocalSerialDBKey<KeyGenProp4ElementalOperator_t>,
-			 LocalSerialDBData<ValGenProp4ElementalOperator_t>>
+      std::vector<LocalBinaryStoreDB<LocalSerialDBKey<KeyGenProp4ElementalOperator_t>,
+				     LocalSerialDBData<ValGenProp4ElementalOperator_t>>>
 	qdp4_db;
 
       // The final elementals are going to be distributed along the lattice `t`
@@ -1048,7 +1048,8 @@ namespace Chroma
       // This function open the output file, after changing the name with the process id if multiple writers is used
       // \param proc_id_t: process rank on the tensor
       // \param numprocs_t: number of processes with support on the tensor
-      std::function<void(int, int)> open_db = [&](int proc_id_t, int numprocs_t) {
+      // \param num_db: number of p
+      std::function<void(int, int, int)> open_db = [&](int proc_id_t, int numprocs_t, int num_db) {
 	// If this process has not support on the tensor, do nothing
 	if (proc_id_t < 0)
 	  return;
@@ -1056,6 +1057,8 @@ namespace Chroma
 	if (db_is_open)
 	{
 	  assert(proc_id_t == this_proc_id_t);
+	  assert((!params.param.contract.use_genprop4_format && qdp_db.size() == num_db) ||
+		 (params.param.contract.use_genprop4_format && qdp4_db.size() == num_db));
 	  return;
 	}
 	this_proc_id_t = proc_id_t;
@@ -1063,61 +1066,69 @@ namespace Chroma
 
 	// If the final elementals are going to be spread among several processes, append the index
 	// of the current process on the `t` dimension to the filename
-	std::string filename = params.named_obj.dist_op_file;
-	if (use_multiple_writers)
-	  filename += "." + std::to_string(proc_id_t + 1) + "_outof_" + std::to_string(numprocs_t);
-
-	// Open the file, and write the meta-data and the binary for this operator
 	if (!params.param.contract.use_genprop4_format)
-	{
-	  if (!qdp_db.fileExists(filename))
-	  {
-	    XMLBufferWriter file_xml;
-
-	    push(file_xml, "DBMetaData");
-	    write(file_xml, "id", std::string("unsmearedMesonElemOp"));
-	    write(file_xml, "lattSize", QDP::Layout::lattSize());
-	    write(file_xml, "decay_dir", decay_dir);
-	    proginfo(file_xml); // Print out basic program info
-	    write(file_xml, "Config_info", gauge_xml);
-	    pop(file_xml);
-
-	    std::string file_str(file_xml.str());
-	    qdp_db.setMaxUserInfoLen(file_str.size());
-
-	    qdp_db.open(filename, O_RDWR | O_CREAT, 0664);
-
-	    qdp_db.insertUserdata(file_str);
-	  }
-	  else
-	  {
-	    qdp_db.open(filename, O_RDWR, 0664);
-	  }
-	}
+	  qdp_db.resize(num_db);
 	else
+	  qdp4_db.resize(num_db);
+	for (int dbi = 0; dbi < num_db; ++dbi)
 	{
-	  if (!qdp4_db.fileExists(filename))
+	  std::string filename = params.named_obj.dist_op_file;
+	  if (use_multiple_writers || num_db > 1)
+	    filename += "." + std::to_string(proc_id_t * num_db + dbi + 1) + "_outof_" +
+			std::to_string(numprocs_t * num_db);
+
+	  // Open the file, and write the meta-data and the binary for this operator
+	  if (!params.param.contract.use_genprop4_format)
 	  {
-	    XMLBufferWriter file_xml;
+	    if (!qdp_db[dbi].fileExists(filename))
+	    {
+	      XMLBufferWriter file_xml;
 
-	    push(file_xml, "DBMetaData");
-	    write(file_xml, "id", std::string("genprop4ElemOp"));
-	    write(file_xml, "lattSize", QDP::Layout::lattSize());
-	    write(file_xml, "decay_dir", decay_dir);
-	    proginfo(file_xml); // Print out basic program info
-	    write(file_xml, "Config_info", gauge_xml);
-	    pop(file_xml);
+	      push(file_xml, "DBMetaData");
+	      write(file_xml, "id", std::string("unsmearedMesonElemOp"));
+	      write(file_xml, "lattSize", QDP::Layout::lattSize());
+	      write(file_xml, "decay_dir", decay_dir);
+	      proginfo(file_xml); // Print out basic program info
+	      write(file_xml, "Config_info", gauge_xml);
+	      pop(file_xml);
 
-	    std::string file_str(file_xml.str());
-	    qdp4_db.setMaxUserInfoLen(file_str.size());
+	      std::string file_str(file_xml.str());
+	      qdp_db[dbi].setMaxUserInfoLen(file_str.size());
 
-	    qdp4_db.open(filename, O_RDWR | O_CREAT, 0664);
+	      qdp_db[dbi].open(filename, O_RDWR | O_CREAT, 0664);
 
-	    qdp4_db.insertUserdata(file_str);
+	      qdp_db[dbi].insertUserdata(file_str);
+	    }
+	    else
+	    {
+	      qdp_db[dbi].open(filename, O_RDWR, 0664);
+	    }
 	  }
 	  else
 	  {
-	    qdp4_db.open(filename, O_RDWR, 0664);
+	    if (!qdp4_db[dbi].fileExists(filename))
+	    {
+	      XMLBufferWriter file_xml;
+
+	      push(file_xml, "DBMetaData");
+	      write(file_xml, "id", std::string("genprop4ElemOp"));
+	      write(file_xml, "lattSize", QDP::Layout::lattSize());
+	      write(file_xml, "decay_dir", decay_dir);
+	      proginfo(file_xml); // Print out basic program info
+	      write(file_xml, "Config_info", gauge_xml);
+	      pop(file_xml);
+
+	      std::string file_str(file_xml.str());
+	      qdp4_db[dbi].setMaxUserInfoLen(file_str.size());
+
+	      qdp4_db[dbi].open(filename, O_RDWR | O_CREAT, 0664);
+
+	      qdp4_db[dbi].insertUserdata(file_str);
+	    }
+	    else
+	    {
+	      qdp4_db[dbi].open(filename, O_RDWR, 0664);
+	    }
 	  }
 	}
 	QDPIO::cout << "Distillation file(s) opened" << std::endl;
@@ -1306,7 +1317,8 @@ namespace Chroma
 		store_db_th.join();
 
 	      // Open DB if they are not opened already
-	      open_db(g5_con.p->procRank(), g5_con.p->numProcs());
+	      open_db(g5_con.p->procRank(), g5_con.p->numProcs(),
+		      use_multiple_writers ? phases.numMom() : 1);
 
 	      // Create a thread to store the tensor while doing other things
 	      store_db_th = std::thread([=, &qdp_db, &qdp4_db, &gammas, &disps, &phases]() {
@@ -1349,7 +1361,7 @@ namespace Chroma
 			      key.key().mom = phases.numToMom(mfrom + mom);
 			      key.key().mass = params.param.contract.mass_label;
 
-			      qdp_db.insert(key, val);
+			      qdp_db[use_multiple_writers ? mfrom + mom : 0].insert(key, val);
 			    }
 			  }
 			}
@@ -1390,7 +1402,7 @@ namespace Chroma
 			    key.key().mom = phases.numToMom(mfrom + mom);
 			    key.key().mass = params.param.contract.mass_label;
 
-			    qdp4_db.insert(key, val);
+			    qdp4_db[use_multiple_writers ? mfrom + mom : 0].insert(key, val);
 			  }
 			}
 		      }
@@ -1424,10 +1436,10 @@ namespace Chroma
       // Close db
       if (db_is_open)
       {
-	if (!params.param.contract.use_genprop4_format)
-	  qdp_db.close();
-	else
-	  qdp4_db.close();
+	for (auto& db : qdp_db)
+	  db.close();
+	for (auto& db : qdp4_db)
+	  db.close();
       }
 
       // Close the xml output file
