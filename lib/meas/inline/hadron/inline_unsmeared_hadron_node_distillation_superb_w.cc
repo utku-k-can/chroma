@@ -1359,6 +1359,8 @@ namespace Chroma
 
 	      if (params.param.contract.use_genprop5_format)
 	      {
+		double t0 = -SB::w_time();
+
 		for (int g = 0; g < gammas.size(); ++g)
 		{
 		  for (int d = 0; d < disps_perm.size(); ++d)
@@ -1376,6 +1378,10 @@ namespace Chroma
 						 {{'g', 1}, {'m', msize}, {'d', 1}, {'t', tsize}}));
 		  }
 		}
+
+		t0 += SB::w_time();
+		QDPIO::cout << "Time to store " << tsize << " tslices : " << t0 << " secs"
+			    << std::endl;
 	      }
 	      else
 	      {
