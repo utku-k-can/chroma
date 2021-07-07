@@ -71,6 +71,9 @@ namespace Chroma
     /// Whether complex conjugate the elements before contraction (see Tensor::contract)
     enum Conjugation { NotConjugate, Conjugate };
 
+    /// Whether the tensor is dense or sparse
+    enum Sparsity { Dense, Sparse };
+
     /// Auxiliary class for initialize Maybe<T> with no value
     struct None {
     };
@@ -821,8 +824,8 @@ namespace Chroma
 	  return;
 	std::stringstream ss;
 	ss << "mem usage, CPU: " << std::fixed << std::setprecision(0)
-	   << superbblas::getCpuMemUsed() / 1024 / 1024
-	   << " MiB   GPU: " << superbblas::getGpuMemUsed() / 1024 / 1024 << " MiB";
+	   << superbblas::getCpuMemUsed(0) / 1024 / 1024
+	   << " MiB   GPU: " << superbblas::getGpuMemUsed(0) / 1024 / 1024 << " MiB";
 	log(1, ss.str());
       }
 
@@ -1009,6 +1012,15 @@ namespace Chroma
       bool isSubtensor() const
       {
 	return (from != Coor<N>{} || size != dim);
+      }
+
+      // Return the first coordinate supported by the tensor
+      std::map<char, int> kvfrom() const
+      {
+	std::map<char, int> d;
+	for (unsigned int i = 0; i < N; ++i)
+	  d[order[i]] = from[i];
+	return d;
       }
 
       // Return the dimensions of the tensor
@@ -1753,6 +1765,247 @@ namespace Chroma
       asTensorView(g).copyTo(r);
       return r;
     }
+
+    template <std::size_t N, typename T>
+    struct StorageTensor {
+      static_assert(superbblas::supported_type<T>::value, "Not supported type");
+
+    public:
+      std::string filename; ///< Storage file
+      std::string metadata; ///< metadata
+      std::string order;    ///< Labels of the tensor dimensions
+      Coor<N> dim;	    ///< Length of the tensor dimensions
+      Sparsity sparsity;    ///< Sparsity of the storage
+      std::shared_ptr<superbblas::detail::Storage_context_abstract>
+	ctx;	    ///< Superbblas storage handler
+      Coor<N> from; ///< First active coordinate in the tensor
+      Coor<N> size; ///< Number of active coordinates on each dimension
+      T scalar;	    ///< Scalar factor of the tensor
+
+      // Empty constructor
+      StorageTensor()
+	: filename{},
+	  metadata{},
+	  order(detail::getTrivialOrder(N)),
+	  dim{},
+	  sparsity(Dense),
+	  ctx{},
+	  from{},
+	  size{},
+	  scalar{0}
+      {
+      }
+
+      // Create storage construct
+      StorageTensor(std::string filename, std::string metadata, const std::string& order,
+		    Coor<N> dim, Sparsity sparsity = Dense)
+	: filename(filename),
+	  metadata(metadata),
+	  order(order),
+	  dim(dim),
+	  sparsity(sparsity),
+	  from{},
+	  size{dim},
+	  scalar{1}
+      {
+	checkOrder();
+	superbblas::Storage_handle stoh;
+	superbblas::create_storage<N, T>(dim, superbblas::FastToSlow, filename.c_str(),
+					 metadata.c_str(), metadata.size(), MPI_COMM_WORLD, &stoh);
+	ctx = std::shared_ptr<superbblas::detail::Storage_context_abstract>(
+	  stoh, [=](superbblas::detail::Storage_context_abstract* ptr) {
+	    superbblas::close_storage(ptr);
+	  });
+
+	// If the tensor to store is dense, create the block here; otherwise, create the block on copy
+	if (sparsity == Dense)
+	{
+	  superbblas::PartitionItem<N> p{Coor<N>{}, dim};
+	  superbblas::append_blocks<N, T>(&p, 1, stoh, MPI_COMM_WORLD, superbblas::FastToSlow);
+	}
+      }
+
+      // Open storage construct
+      StorageTensor(std::string filename, std::string metadata, const std::string& order)
+	: filename(filename), order(order), sparsity(Sparse), from{}, scalar{1}
+      {
+	checkOrder();
+
+	// Read information from the storage
+	superbblas::values_datatype values_dtype;
+	std::vector<char> metadatav;
+	std::vector<superbblas::IndexType> dimv;
+	superbblas::read_storage_header(filename.c_str(), superbblas::FastToSlow, values_dtype,
+					metadatav, dimv, MPI_COMM_WORLD);
+
+	// Check that storage tensor dimension and value type match template arguments
+	if (dimv.size() != N)
+	  throw std::runtime_error(
+	    "The storage tensor dimension does not match the template parameter N");
+	if (superbblas::detail::get_values_datatype<T>() != values_dtype)
+	  throw std::runtime_error("Storage type does not match template argument T");
+
+	// Fill out the information of this class with storage header information
+	std::copy(dimv.begin(), dimv.end(), dim.begin());
+	metadata = std::string(metadatav.begin(), metadatav.end());
+
+	superbblas::Storage_handle stoh;
+	superbblas::open_storage<N, T>(filename.c_str(), MPI_COMM_WORLD, &stoh);
+	ctx = std::shared_ptr<superbblas::detail::Storage_context_abstract>(
+	  stoh, [=](const superbblas::detail::Storage_context_abstract* ptr) {
+	    superbblas::close_storage(ptr);
+	  });
+      }
+
+    protected:
+      // Construct a slice/scale storage
+      StorageTensor(const StorageTensor& t, const std::string& order, Coor<N> from, Coor<N> size,
+		    T scalar)
+	: filename(t.filename),
+	  metadata(t.metadata),
+	  order(order),
+	  dim(t.dim),
+	  ctx(t.ctx),
+	  sparsity(t.sparsity),
+	  from(normalize_coor(from, t.dim)),
+	  size(size),
+	  scalar{t.scalar}
+      {
+	checkOrder();
+      }
+
+    public:
+      /// Return whether the tensor is not empty
+      explicit operator bool() const noexcept
+      {
+	return superbblas::detail::volume(size) > 0;
+      }
+
+      // Return the dimensions of the tensor
+      std::map<char, int> kvdim() const
+      {
+	std::map<char, int> d;
+	for (unsigned int i = 0; i < N; ++i)
+	  d[order[i]] = size[i];
+	return d;
+      }
+
+      /// Rename dimensions
+      StorageTensor<N, T> rename_dims(SB::remap m) const
+      {
+	return StorageTensor<N, T>(*this, detail::update_order<N>(order, m), this->from,
+				   this->size);
+      }
+
+      // Return a slice of the tensor starting at coordinate `kvfrom` and taking `kvsize` elements in each direction.
+      // The missing dimension in `kvfrom` are set to zero and the missing direction in `kvsize` are set to the active size of the tensor.
+      StorageTensor<N, T> kvslice_from_size(std::map<char, int> kvfrom = {},
+					    std::map<char, int> kvsize = {}) const
+      {
+	std::map<char, int> updated_kvsize = this->kvdim();
+	for (const auto& it : kvsize)
+	  updated_kvsize[it.first] = it.second;
+	return slice_from_size(kvcoors<N>(order, kvfrom), kvcoors<N>(order, updated_kvsize));
+      }
+
+      // Return a slice of the tensor starting at coordinate `from` and taking `size` elements in each direction.
+      StorageTensor<N, T> slice_from_size(Coor<N> from, Coor<N> size) const
+      {
+	for (unsigned int i = 0; i < N; ++i)
+	{
+	  if (size[i] > this->size[i])
+	    throw std::runtime_error(
+	      "The size of the slice cannot be larger than the original tensor");
+	  if (normalize_coor(from[i], this->size[i]) + size[i] > this->size[i] &&
+	      this->size[i] != this->dim[i])
+	    throw std::runtime_error(
+	      "Unsupported to make a view on a non-contiguous range on the tensor");
+	}
+
+	using superbblas::detail::operator+;
+	return StorageTensor<N, T>(*this, order, this->from + from, size, scalar);
+      }
+
+      StorageTensor<N, T> scale(T s) const
+      {
+	return StorageTensor<N, T>(*this, order, from, scalar * s);
+      }
+
+      void release()
+      {
+	dim = {};
+	ctx.reset();
+	from = {};
+	size = {};
+	scalar = T{0};
+	filename = "";
+	metadata = "";
+      }
+
+      /// Check that the dimension labels are valid
+
+      void checkOrder() const
+      {
+	// Check that all labels are different there are N
+	detail::check_order<N>(order);
+
+	for (auto s : size)
+	  if (s < 0)
+	    std::runtime_error("Invalid tensor size: it should be positive");
+      }
+
+      /// Save content from the storage into the given tensor
+      template <std::size_t Nw, typename Tw,
+		typename std::enable_if<
+		  detail::is_complex<T>::value == detail::is_complex<Tw>::value, bool>::type = true>
+      void copyFrom(Tensor<Nw, Tw> w) const
+      {
+	Coor<N> wsize = kvcoors<N>(order, w.kvdim(), 1, NoThrow);
+	for (unsigned int i = 0; i < N; ++i)
+	  if (wsize[i] > size[i])
+	    throw std::runtime_error("The destination tensor is smaller than the source tensor");
+
+	MPI_Comm comm = (w.dist == Local ? MPI_COMM_SELF : MPI_COMM_WORLD);
+
+	// If the storage is sparse, add blocks for the new content
+	if (sparsity == Sparse)
+	{
+	  typename detail::TensorPartition<N>::PartitionStored p;
+	  p.reserve(w.p->p.size());
+	  for (const superbblas::PartitionItem<Nw>& i : w.p->p)
+	  {
+	    p.push_back(superbblas::PartitionItem<N>{kvcoors<N>(order, w.kvfrom(), 0, NoThrow),
+						     kvcoors<N>(order, w.kvdim(), 1, NoThrow)});
+	  }
+	  superbblas::append_blocks<N, T>(p.data(), p.size(), ctx.get(), MPI_COMM_WORLD,
+					  superbblas::FastToSlow);
+	}
+
+	Tw* w_ptr = w.data.get();
+	superbblas::save<Nw, N, Tw, T>(detail::safe_div<T>(w.scalar, scalar), w.p->p.data(), 1,
+				       w.order.c_str(), w.from, w.size, (const Tw**)&w_ptr, &*w.ctx,
+				       order.c_str(), from, ctx.get(), comm,
+				       superbblas::FastToSlow);
+      }
+
+      /// Load content from the storage into the given tensor
+      template <std::size_t Nw, typename Tw,
+		typename std::enable_if<
+		  detail::is_complex<T>::value == detail::is_complex<Tw>::value, bool>::type = true>
+      void copyTo(Tensor<Nw, Tw> w) const
+      {
+	Coor<N> wsize = kvcoors<N>(order, w.kvdim(), 1, NoThrow);
+	for (unsigned int i = 0; i < N; ++i)
+	  if (size[i] > wsize[i])
+	    throw std::runtime_error("The destination tensor is smaller than the source tensor");
+
+	Tw* w_ptr = w.data.get();
+	MPI_Comm comm = (w.dist == Local ? MPI_COMM_SELF : MPI_COMM_WORLD);
+	superbblas::load<N, Nw>(detail::safe_div<T>(scalar, w.scalar), ctx.get(), order.c_str(),
+				from, size, w.p->p.data(), 1, w.order.c_str(), w.from, &w_ptr,
+				&*w.ctx, comm, superbblas::FastToSlow, superbblas::Copy);
+      }
+    };
 
     /// Return a tensor filled with the value of the function applied to each element
     /// \param order: dimension labels, they should start with "xyztX"
