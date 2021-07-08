@@ -1970,15 +1970,8 @@ namespace Chroma
 	// If the storage is sparse, add blocks for the new content
 	if (sparsity == Sparse)
 	{
-	  typename detail::TensorPartition<N>::PartitionStored p;
-	  p.reserve(w.p->p.size());
-	  for (const superbblas::PartitionItem<Nw>& i : w.p->p)
-	  {
-	    p.push_back(superbblas::PartitionItem<N>{kvcoors<N>(order, w.kvfrom(), 0, NoThrow),
-						     kvcoors<N>(order, w.kvdim(), 1, NoThrow)});
-	  }
-	  superbblas::append_blocks<N, T>(p.data(), p.size(), ctx.get(), MPI_COMM_WORLD,
-					  superbblas::FastToSlow);
+	  auto p = superbblas::PartitionItem<N>{from, kvcoors<N>(order, w.kvdim(), 1, NoThrow)};
+	  superbblas::append_blocks<N, T>(&p, 1, ctx.get(), comm, superbblas::FastToSlow);
 	}
 
 	Tw* w_ptr = w.data.get();

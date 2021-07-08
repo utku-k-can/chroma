@@ -1033,6 +1033,8 @@ namespace Chroma
       // Set how many processes are going to write elementals; each process is going to write in a
       // independent file
       bool use_multiple_writers = params.param.contract.use_multiple_writers;
+      if (params.param.contract.use_genprop5_format)
+	use_multiple_writers = true;
 
       //
       // DB storage
