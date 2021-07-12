@@ -1954,6 +1954,14 @@ namespace Chroma
 	    std::runtime_error("Invalid tensor size: it should be positive");
       }
 
+      /// Preallocate space for the storage file
+      /// \param size: expected final file size in bytes
+
+      void preallocate(std::size_t size)
+      {
+	superbblas::preallocate_storage(ctx.get(), size);
+      }
+
       /// Save content from the storage into the given tensor
       template <std::size_t Nw, typename Tw,
 		typename std::enable_if<

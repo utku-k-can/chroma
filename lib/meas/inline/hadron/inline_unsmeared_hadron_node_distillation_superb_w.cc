@@ -1047,6 +1047,18 @@ namespace Chroma
 	qdp4_db;
       SB::StorageTensor<10, SB::ComplexD> qdp5_db; // nNsSgdmtpP
 
+      // Estimate the number of keys
+      std::size_t max_tslices = 0;
+      for (const auto& sink_source : params.param.sink_source_pairs)
+	max_tslices =
+	  std::max(max_tslices, (std::size_t)sink_source.Nt_backward + sink_source.Nt_forward + 1);
+      std::size_t num_keys_gp4 = phases.numMom() * gammas.size() * disps.size() * max_tslices *
+				 params.param.sink_source_pairs.size();
+      for (auto& db : qdp_db)
+	db.setNumberBuckets(num_keys_gp4 * num_vecs * 2);
+      for (auto& db : qdp4_db)
+	db.setNumberBuckets(num_keys_gp4 * 2);
+
       // The final elementals are going to be distributed along the lattice `t`
       // dimension, with no support on the lattice spatial dimension.  Because
       // of this, not all processes are going to have support on the final
@@ -1179,6 +1191,7 @@ namespace Chroma
 									   {'p', Lt},
 									   {'P', Lt}}),
 					      SB::Sparse);
+	qdp5_db.preallocate(num_keys_gp4 * num_vecs * num_vecs * Ns * Ns * sizeof(SB::ComplexD));
       }
 
       std::thread store_db_th; // background thread writing elementals
@@ -1374,7 +1387,7 @@ namespace Chroma
 					  {'t', (tfrom + first_tslice_active) % Lt},
 					  {'p', t_source},
 					  {'P', t_sink}},
-					 {{'d', 1}, {'p', 1}, {'P', 1}})
+					 {{'g', 1}, {'d', 1}, {'p', 1}, {'P', 1}})
 		      .copyFrom(
 			g5_con.kvslice_from_size({{'g', g}, {'m', 0}, {'d', d}, {'t', 0}},
 						 {{'g', 1}, {'m', msize}, {'d', 1}, {'t', tsize}}));
