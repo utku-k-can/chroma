@@ -1970,8 +1970,9 @@ namespace Chroma
 	// If the storage is sparse, add blocks for the new content
 	if (sparsity == Sparse)
 	{
-	  auto p = superbblas::PartitionItem<N>{from, kvcoors<N>(order, w.kvdim(), 1, NoThrow)};
-	  superbblas::append_blocks<N, T>(&p, 1, ctx.get(), comm, superbblas::FastToSlow);
+	  superbblas::append_blocks<Nw, N, T>(w.p->p.data(), w.p->p.size(), w.order.c_str(), w.from,
+					      w.size, order.c_str(), from, ctx.get(), comm,
+					      superbblas::FastToSlow);
 	}
 
 	Tw* w_ptr = w.data.get();
