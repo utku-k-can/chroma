@@ -1069,8 +1069,7 @@ namespace Chroma
       // This function open the output file, after changing the name with the process id if multiple writers is used
       // \param proc_id_t: process rank on the tensor
       // \param numprocs_t: number of processes with support on the tensor
-      // \param num_db: number of p
-      std::function<void(int, int, int)> open_db = [&](int proc_id_t, int numprocs_t, int num_db) {
+      std::function<void(int, int)> open_db = [&](int proc_id_t, int numprocs_t) {
 	if (params.param.contract.use_genprop5_format)
 	  return;
 
@@ -1081,8 +1080,8 @@ namespace Chroma
 	if (db_is_open)
 	{
 	  assert(proc_id_t == this_proc_id_t);
-	  assert((!params.param.contract.use_genprop4_format && qdp_db.size() == num_db) ||
-		 (params.param.contract.use_genprop4_format && qdp4_db.size() == num_db));
+	  assert((!params.param.contract.use_genprop4_format && qdp_db.size() == 1) ||
+		 (params.param.contract.use_genprop4_format && qdp4_db.size() == 1));
 	  return;
 	}
 	this_proc_id_t = proc_id_t;
@@ -1091,68 +1090,64 @@ namespace Chroma
 	// If the final elementals are going to be spread among several processes, append the index
 	// of the current process on the `t` dimension to the filename
 	if (!params.param.contract.use_genprop4_format)
-	  qdp_db.resize(num_db);
+	  qdp_db.resize(1);
 	else
-	  qdp4_db.resize(num_db);
-	for (int dbi = 0; dbi < num_db; ++dbi)
+	  qdp4_db.resize(1);
+	std::string filename = params.named_obj.dist_op_file;
+	if (use_multiple_writers)
+	  filename += "." + std::to_string(proc_id_t + 1) + "_outof_" + std::to_string(numprocs_t);
+
+	// Open the file, and write the meta-data and the binary for this operator
+	if (!params.param.contract.use_genprop4_format)
 	{
-	  std::string filename = params.named_obj.dist_op_file;
-	  if (use_multiple_writers || num_db > 1)
-	    filename += "." + std::to_string(proc_id_t * num_db + dbi + 1) + "_outof_" +
-			std::to_string(numprocs_t * num_db);
-
-	  // Open the file, and write the meta-data and the binary for this operator
-	  if (!params.param.contract.use_genprop4_format)
+	  if (!qdp_db[0].fileExists(filename))
 	  {
-	    if (!qdp_db[dbi].fileExists(filename))
-	    {
-	      XMLBufferWriter file_xml;
+	    XMLBufferWriter file_xml;
 
-	      push(file_xml, "DBMetaData");
-	      write(file_xml, "id", std::string("unsmearedMesonElemOp"));
-	      write(file_xml, "lattSize", QDP::Layout::lattSize());
-	      write(file_xml, "decay_dir", decay_dir);
-	      proginfo(file_xml); // Print out basic program info
-	      write(file_xml, "Config_info", gauge_xml);
-	      pop(file_xml);
+	    push(file_xml, "DBMetaData");
+	    write(file_xml, "id", std::string("unsmearedMesonElemOp"));
+	    write(file_xml, "lattSize", QDP::Layout::lattSize());
+	    write(file_xml, "decay_dir", decay_dir);
+	    proginfo(file_xml); // Print out basic program info
+	    write(file_xml, "Config_info", gauge_xml);
+	    pop(file_xml);
 
-	      std::string file_str(file_xml.str());
-	      qdp_db[dbi].setMaxUserInfoLen(file_str.size());
+	    std::string file_str(file_xml.str());
+	    qdp_db[0].setMaxUserInfoLen(file_str.size());
 
-	      qdp_db[dbi].open(filename, O_RDWR | O_CREAT, 0664);
+	    qdp_db[0].open(filename, O_RDWR | O_CREAT, 0664);
 
-	      qdp_db[dbi].insertUserdata(file_str);
-	    }
-	    else
-	    {
-	      qdp_db[dbi].open(filename, O_RDWR, 0664);
-	    }
+	    qdp_db[0].insertUserdata(file_str);
 	  }
 	  else
 	  {
-	    if (!qdp4_db[dbi].fileExists(filename))
-	    {
-	      XMLBufferWriter file_xml;
+	    qdp_db[0].open(filename, O_RDWR, 0664);
+	  }
+	}
+	else
+	{
+	  if (!qdp4_db[0].fileExists(filename))
+	  {
+	    XMLBufferWriter file_xml;
 
-	      push(file_xml, "DBMetaData");
-	      write(file_xml, "id", std::string("genprop4ElemOp"));
-	      write(file_xml, "lattSize", QDP::Layout::lattSize());
-	      write(file_xml, "decay_dir", decay_dir);
-	      proginfo(file_xml); // Print out basic program info
-	      write(file_xml, "Config_info", gauge_xml);
-	      pop(file_xml);
+	    push(file_xml, "DBMetaData");
+	    write(file_xml, "id", std::string("genprop4ElemOp"));
+	    write(file_xml, "lattSize", QDP::Layout::lattSize());
+	    write(file_xml, "decay_dir", decay_dir);
+	    proginfo(file_xml); // Print out basic program info
+	    write(file_xml, "Config_info", gauge_xml);
+	    pop(file_xml);
 
-	      std::string file_str(file_xml.str());
-	      qdp4_db[dbi].setMaxUserInfoLen(file_str.size());
+	    std::string file_str(file_xml.str());
+	    qdp4_db[0].setMaxUserInfoLen(file_str.size());
 
-	      qdp4_db[dbi].open(filename, O_RDWR | O_CREAT, 0664);
+	    qdp4_db[0].open(filename, O_RDWR | O_CREAT, 0664);
 
-	      qdp4_db[dbi].insertUserdata(file_str);
-	    }
-	    else
-	    {
-	      qdp4_db[dbi].open(filename, O_RDWR, 0664);
-	    }
+	    qdp4_db[0].insertUserdata(file_str);
+	  }
+	  else
+	  {
+	    qdp4_db[0].open(filename, O_RDWR, 0664);
 	  }
 	}
 	QDPIO::cout << "Distillation file(s) opened" << std::endl;
@@ -1175,6 +1170,8 @@ namespace Chroma
 	  moms.push_back(phases.numToMom(i));
 	write(metadata_xml, "moms", moms);
 	write(metadata_xml, "mass_label", params.param.contract.mass_label);
+	write(metadata_xml, "gammas", gammas);
+	write(metadata_xml, "eigen_phase", params.param.contract.phase);
 	pop(metadata_xml);
 
 	std::string metadata(metadata_xml.str());
@@ -1184,14 +1181,14 @@ namespace Chroma
 									   {'N', num_vecs},
 									   {'s', Ns},
 									   {'q', Ns},
-									   {'g', Ns * Ns},
+									   {'g', gammas.size()},
 									   {'d', disps.size()},
 									   {'m', moms.size()},
 									   {'t', Lt},
 									   {'p', Lt},
 									   {'P', Lt}}),
-					      SB::Sparse);
-	qdp5_db.preallocate(num_keys_gp4 * num_vecs * num_vecs * Ns * Ns * sizeof(SB::ComplexD));
+					      SB::Sparse, SB::checksum_type::BlockChecksum);
+	qdp5_db.preallocate(num_keys_gp4 * num_vecs * num_vecs * gammas.size() * sizeof(SB::ComplexD));
       }
 
       std::thread store_db_th; // background thread writing elementals
@@ -1261,7 +1258,10 @@ namespace Chroma
 
 	  int first_tslice_active = t_source - sink_source.Nt_backward;
 	  int num_tslices_active =
-	    std::min(sink_source.Nt_backward + sink_source.Nt_forward + 1, Lt);
+	    std::min(sink_source.Nt_backward + std::max(sink_source.Nt_forward, 1), Lt);
+	  // Don't compute tslices beyond t_sink
+	  num_tslices_active =
+	    std::min(num_tslices_active, SB::normalize_coor(t_sink - t_source, Lt) + 2);
 	  // Make the number of time-slices even; required by SB::doMomGammaDisp_contractions
 	  num_tslices_active = std::min(num_tslices_active + num_tslices_active % 2, Lt);
 
@@ -1376,23 +1376,20 @@ namespace Chroma
 	      {
 		double t0 = -SB::w_time();
 
-		for (int g = 0; g < gammas.size(); ++g)
+		auto g5_con_rearrange_d = g5_con.like_this();
+		for (int d = 0; d < disps_perm.size(); ++d)
 		{
-		  for (int d = 0; d < disps_perm.size(); ++d)
-		  {
-		    qdp5_db
-		      .kvslice_from_size({{'g', gammas[g]},
-					  {'d', disps_perm[d]},
-					  {'m', mfrom},
-					  {'t', (tfrom + first_tslice_active) % Lt},
-					  {'p', t_source},
-					  {'P', t_sink}},
-					 {{'g', 1}, {'d', 1}, {'p', 1}, {'P', 1}})
-		      .copyFrom(
-			g5_con.kvslice_from_size({{'g', g}, {'m', 0}, {'d', d}, {'t', 0}},
-						 {{'g', 1}, {'m', msize}, {'d', 1}, {'t', tsize}}));
-		  }
+		  g5_con.kvslice_from_size({{'d', d}}, {{'d', 1}})
+		    .copyTo(g5_con_rearrange_d.kvslice_from_size({{'d', disps_perm[d]}}, {{'d', 1}}));
 		}
+
+		qdp5_db
+		  .kvslice_from_size({{'m', mfrom},
+				      {'t', (tfrom + first_tslice_active) % Lt},
+				      {'p', t_source},
+				      {'P', t_sink}},
+				     {{'p', 1}, {'P', 1}})
+		  .copyFrom(g5_con_rearrange_d);
 
 		t0 += SB::w_time();
 		QDPIO::cout << "Time to store " << tsize << " tslices : " << t0 << " secs"
@@ -1405,8 +1402,7 @@ namespace Chroma
 		  store_db_th.join();
 
 		// Open DB if they are not opened already
-		open_db(g5_con.p->procRank(), g5_con.p->numProcs(),
-			use_multiple_writers ? phases.numMom() : 1);
+		open_db(g5_con.p->procRank(), g5_con.p->numProcs());
 
 		// Create a thread to store the tensor while doing other things
 		store_db_th = std::thread([=, &qdp_db, &qdp4_db, &gammas, &disps, &phases]() {

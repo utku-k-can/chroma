@@ -53,6 +53,7 @@ namespace Chroma
     using ComplexF = std::complex<REAL32>;
     template <std::size_t N>
     using Coor = superbblas::Coor<N>;
+    using checksum_type = superbblas::checksum_type;
 
     /// Where to store the tensor (see class Tensor)
     enum DeviceHost {
@@ -1798,7 +1799,8 @@ namespace Chroma
 
       // Create storage construct
       StorageTensor(std::string filename, std::string metadata, const std::string& order,
-		    Coor<N> dim, Sparsity sparsity = Dense)
+		    Coor<N> dim, Sparsity sparsity = Dense,
+		    checksum_type checksum = checksum_type::NoChecksum)
 	: filename(filename),
 	  metadata(metadata),
 	  order(order),
@@ -1811,10 +1813,11 @@ namespace Chroma
 	checkOrder();
 	superbblas::Storage_handle stoh;
 	superbblas::create_storage<N, T>(dim, superbblas::FastToSlow, filename.c_str(),
-					 metadata.c_str(), metadata.size(), MPI_COMM_WORLD, &stoh);
+					 metadata.c_str(), metadata.size(), checksum,
+					 MPI_COMM_WORLD, &stoh);
 	ctx = std::shared_ptr<superbblas::detail::Storage_context_abstract>(
 	  stoh, [=](superbblas::detail::Storage_context_abstract* ptr) {
-	    superbblas::close_storage(ptr);
+	    superbblas::close_storage<N, T>(ptr, MPI_COMM_WORLD);
 	  });
 
 	// If the tensor to store is dense, create the block here; otherwise, create the block on copy
@@ -1853,7 +1856,7 @@ namespace Chroma
 	superbblas::open_storage<N, T>(filename.c_str(), MPI_COMM_WORLD, &stoh);
 	ctx = std::shared_ptr<superbblas::detail::Storage_context_abstract>(
 	  stoh, [=](const superbblas::detail::Storage_context_abstract* ptr) {
-	    superbblas::close_storage(ptr);
+	    superbblas::close_storage<N, T>(ptr, MPI_COMM_WORLD);
 	  });
       }
 
