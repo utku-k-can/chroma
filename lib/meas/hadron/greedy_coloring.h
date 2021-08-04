@@ -16,7 +16,7 @@ namespace Chroma
   // Interface for computes distance-k coloring for toroidal lattices
   struct Coloring {
     // Construct a k-distance coloring
-    Coloring(unsigned int distance);
+    Coloring(unsigned int distance, unsigned int power);
     // Reading the coloring from a file
     Coloring(const std::string& filename);
 
