@@ -35,6 +35,10 @@ namespace Chroma
 
     // Return the permutation [0,1,...]
 
+// Avoid intel compiler explosion
+#ifdef __INTEL_COMPILER
+#  pragma intel optimization_level 0
+#endif
     CoorType naturalOrder()
     {
       CoorType c;
@@ -45,6 +49,10 @@ namespace Chroma
 
     // Return the permuation [N-1,N-2,...]
 
+// Avoid intel compiler explosion
+#ifdef __INTEL_COMPILER
+#  pragma intel optimization_level 0
+#endif
     CoorType antiNaturalOrder()
     {
       CoorType c;
@@ -431,7 +439,7 @@ namespace Chroma
 	{
 	  throw std::runtime_error("The coloring file has too many rows!");
 	}
-	colors[coor2index(index2coor(Indices(1, i), latt_size), latt_size, naturalOrder())[0]] =
+	colors[coor2index(index2coor(Indices(1, i), latt_size, naturalOrder()), latt_size)[0]] =
 	  idx - 1;
       }
       if (i < vol)
