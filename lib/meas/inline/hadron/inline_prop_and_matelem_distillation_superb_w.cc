@@ -527,7 +527,6 @@ namespace Chroma
 	const multi1d<int>& t_sources = params.param.contract.t_sources;
 	const int max_rhs             = params.param.contract.max_rhs;
 
-	
 	// Loop over each time source
 	for (int tt = 0; tt < t_sources.size(); ++tt)
 	{
@@ -536,47 +535,50 @@ namespace Chroma
 
 	  // Compute the first tslice and the number of tslices involved in the contraction
 	  int first_tslice = t_source - params.param.contract.Nt_backward;
-	  int num_tslices =
-	    std::min(params.param.contract.Nt_backward + params.param.contract.Nt_forward + 1, Lt);
+	  int num_tslices = std::min(
+	    params.param.contract.Nt_backward + std::max(1, params.param.contract.Nt_forward), Lt);
 
 	  // Get `num_vecs` colorvecs, and `num_tslices` tslices starting from time-slice `first_tslice`
 	  SB::Tensor<Nd + 3, SB::Complex> colorvec = SB::getColorvecs<SB::Complex>(
 	    eigen_source, decay_dir, first_tslice, num_tslices, num_vecs,
 	    "cxyzXnt" /* contractions requires t being the last */, phase);
 
-	  StopWatch snarss1;
-	  snarss1.reset();
-	  snarss1.start();
-
-	  // Invert the source for all spins and retrieve `num_tslices` tslices starting from tslice `first_tslice`
-	  // NOTE: s is spin source, and S is spin sink
+	  // Get all eigenvectors for `t_source`
 	  auto source_colorvec =
 	    colorvec.kvslice_from_size({{'t', t_source - first_tslice}}, {{'t', 1}});
-	  SB::Tensor<Nd + 5, SB::Complex> quark_solns = SB::doInversion<SB::Complex, SB::Complex>(
-	    *PP, source_colorvec, t_source, first_tslice, num_tslices, {0, 1, 2, 3}, max_rhs,
-	    "cxyzXnSst" /*< contractions requires t, S, s being the slowest indices */);
 
-	  // Contract the distillation elements
-	  // NOTE: N: is colorvec in sink, and n is colorvec in source
-	  SB::Tensor<5, SB::Complex> elems("NnSst", {num_vecs, num_vecs, Ns, Ns, num_tslices},
-					   SB::OnHost, SB::OnMaster);
-	  elems.contract(colorvec, {{'n', 'N'}}, SB::Conjugate, quark_solns, {}, SB::NotConjugate);
-
-	  snarss1.stop();
-	  QDPIO::cout << "Time to contract for all spins : " << snarss1.getTimeInSeconds()
-		      << " secs" << std::endl;
-
-	  snarss1.reset();
-	  snarss1.start();
-
-	  ValPropElementalOperator_t val;
-	  val.mat.resize(num_vecs, num_vecs);
-	  val.mat = zero;
-	  for (int i_tslice = 0; i_tslice < num_tslices; ++i_tslice)
+	  for (int spin_source = 0; spin_source < Ns; ++spin_source)
 	  {
-	    for (int spin_sink = 0; spin_sink < Ns; ++spin_sink)
+	    // Invert the source for `spin_source` spin and retrieve `num_tslices` tslices starting from tslice `first_tslice`
+	    // NOTE: s is spin source, and S is spin sink
+	    SB::Tensor<Nd + 5, SB::Complex> quark_solns = SB::doInversion<SB::Complex, SB::Complex>(
+	      *PP, source_colorvec, t_source, first_tslice, num_tslices, {spin_source}, max_rhs,
+	      "cxyzXnSst" /*< contractions requires t, S, s being the slowest indices */);
+
+	    StopWatch snarss1;
+	    snarss1.reset();
+	    snarss1.start();
+
+	    // Contract the distillation elements
+	    // NOTE: N: is colorvec in sink, and n is colorvec in source
+	    SB::Tensor<5, SB::Complex> elems("NnSst", {num_vecs, num_vecs, Ns, 1, num_tslices},
+					     SB::OnHost, SB::OnMaster);
+	    elems.contract(colorvec, {{'n', 'N'}}, SB::Conjugate, quark_solns, {},
+			   SB::NotConjugate);
+
+	    snarss1.stop();
+	    QDPIO::cout << "Time to contract for one spin source : " << snarss1.getTimeInSeconds()
+			<< " secs" << std::endl;
+
+	    snarss1.reset();
+	    snarss1.start();
+
+	    ValPropElementalOperator_t val;
+	    val.mat.resize(num_vecs, num_vecs);
+	    val.mat = zero;
+	    for (int i_tslice = 0; i_tslice < num_tslices; ++i_tslice)
 	    {
-	      for (int spin_source = 0; spin_source < Ns; ++spin_source)
+	      for (int spin_sink = 0; spin_sink < Ns; ++spin_sink)
 	      {
 		KeyPropElementalOperator_t key;
 		key.t_source = t_source;
@@ -591,7 +593,7 @@ namespace Chroma
 		    for (int colorvec_source = 0; colorvec_source < num_vecs; ++colorvec_source)
 		    {
 		      std::complex<REAL> e = elems.get(
-			{colorvec_sink, colorvec_source, spin_sink, spin_source, i_tslice});
+			{colorvec_sink, colorvec_source, spin_sink, 0, i_tslice});
 		      val.mat(colorvec_sink, colorvec_source).elem().elem().elem() =
 			RComplex<REAL64>(e.real(), e.imag());
 		    }
@@ -600,22 +602,21 @@ namespace Chroma
 		qdp_db.insert(key, val);
 	      }
 	    }
-	  }
 
-	  snarss1.stop();
-	  QDPIO::cout << "Time to store the props : " << snarss1.getTimeInSeconds() << " secs"
-		      << std::endl;
-	} // for tt
+	    snarss1.stop();
+	    QDPIO::cout << "Time to store the props : " << snarss1.getTimeInSeconds() << " secs"
+			<< std::endl;
+	  } // for spin_source
+	}   // for tt
 
 	swatch.stop();
 	QDPIO::cout << "Propagators computed: time= " 
 		    << swatch.getTimeInSeconds() 
 		    << " secs" << std::endl;
       }
-      catch (const std::string& e) 
+      catch (const std::exception& e) 
       {
-	QDPIO::cout << name << ": caught exception around qprop: " << e << std::endl;
-	QDP_abort(1);
+	QDP_error_exit("%s: caught exception: %s\n", name, e.what());
       }
 
       push(xml_out,"Relaxation_Iterations");

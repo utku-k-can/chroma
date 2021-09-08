@@ -114,6 +114,12 @@ namespace Chroma
       else
 	param.probing_distance = param.max_path_length;
 
+      if(inputtop.count("probing_power")!=0){ 
+	read(inputtop,"probing_power",param.probing_power) ;
+      }
+      else
+	param.probing_power = 2;
+
       if(inputtop.count("probing_file")!=0){ 
 	read(inputtop,"probing_file",param.probing_file) ;
       }
@@ -143,6 +149,7 @@ namespace Chroma
       write(xml,"Propagator",param.prop) ;
       write(xml,"use_ferm_state_links",param.use_ferm_state_links) ;
       write(xml,"probing_distance",param.probing_distance) ;
+      write(xml,"probing_power",param.probing_power) ;
       write(xml,"noise_vectors",param.noise_vectors) ;
       write(xml,"max_rhs",param.max_rhs) ;
       xml << param.projParam.xml;
@@ -656,8 +663,10 @@ namespace Chroma
         QDPIO::cout << "Reading colors from file " << params.param.probing_file << std::endl;
         coloring.reset(new Coloring(params.param.probing_file));
       } else {
-        QDPIO::cout << "Generating a " << params.param.probing_distance << "-distance coloring" << std::endl;
-        coloring.reset(new Coloring(params.param.probing_distance));
+	QDPIO::cout << "Generating a " << params.param.probing_distance
+		    << "-distance coloring with a power " << params.param.probing_power
+		    << std::endl;
+	coloring.reset(new Coloring(params.param.probing_distance, params.param.probing_power));
       }
     
       //
