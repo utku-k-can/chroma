@@ -1,11 +1,9 @@
 #include "qdp.h"
 
 #ifdef QDP_IS_QDPJIT
-#ifdef QDPJIT_IS_QDPJITNVVM
 
 using namespace QDP;
 
-//#define QDP_JIT_NVVM_USE_LEGACY_LAUNCH
 
 void function_get_fs_bs_exec(JitFunction& function, 
 			     const LatticeColorMatrix& Q,
@@ -122,19 +120,19 @@ void function_get_fs_bs_build(JitFunction& function,
   llvm_cond_exit( llvm_ge( r_idx , r_hi ) );
 
 
-  auto& Q_j  = Q_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-  auto& QQ_j = QQ_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto Q_j  = Q_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto QQ_j = QQ_jit.elem(JitDeviceLayout::Coalesced,r_idx);
 
-  auto& f0_j = f0_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-  auto& f1_j = f1_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-  auto& f2_j = f2_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto f0_j = f0_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto f1_j = f1_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto f2_j = f2_jit.elem(JitDeviceLayout::Coalesced,r_idx);
   
-  auto& b10_j = b10_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-  auto& b11_j = b11_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-  auto& b12_j = b12_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-  auto& b20_j = b20_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-  auto& b21_j = b21_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-  auto& b22_j = b22_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto b10_j = b10_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto b11_j = b11_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto b12_j = b12_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto b20_j = b20_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto b21_j = b21_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+  auto b22_j = b22_jit.elem(JitDeviceLayout::Coalesced,r_idx);
 
 
   // Get the traces
@@ -561,5 +559,5 @@ void function_get_fs_bs_build(JitFunction& function,
 
 
 
-#endif
+
 #endif

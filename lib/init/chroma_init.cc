@@ -18,6 +18,12 @@
 
 #ifdef BUILD_QUDA
 #include <quda.h>
+#include <unistd.h>
+#ifndef QDP_IS_QDPJIT
+#include "init/local_rank.h"
+#include <quda_api.h>
+#include <device.h>
+#endif
 #endif
 
 // Indlude it no-matter what
@@ -114,7 +120,7 @@ namespace Chroma
   //! Chroma initialisation routine
   void initialize(int* argc, char ***argv) 
   {
-#if defined QDPJIT_IS_QDPJITPTX || defined QDPJIT_IS_QDPJITNVVM
+#if defined QDP_IS_QDPJIT
     if (! QDP_isInitialized())
       QDP_initialize_CUDA(argc, argv);
 #else
@@ -212,7 +218,7 @@ namespace Chroma
     }
 
     // Good luck following the flow of the conditional compilation macros
-#if defined QDPJIT_IS_QDPJITPTX || defined QDPJIT_IS_QDPJITNVVM
+#if defined QDP_IS_QDPJIT
 #  ifdef BUILD_QUDA
     std::cout << "Setting CUDA device" << std::endl;
 #    ifndef QDP_USE_COMM_SPLIT_INIT
@@ -256,10 +262,14 @@ namespace Chroma
 #    endif
 #  endif // BUILD_CUDA
 
-#else // defined QDPJIT_IS_QDPJITPTX || defined QDPJIT_IS_QDPJITNVVM
+#else // defined QDP_IS_QDPJIT
 #  ifdef BUILD_QUDA
-    std::cout << "Initializing QUDA" << std::endl;
-    initQuda(-1);
+   {
+     char hostname[128];
+     ::gethostname(hostname, sizeof(hostname)); 
+     std::cout << "Initializing QUDA on local rank: " << localRank() << " on host: " << hostname <<  " with initQuda(-1)" <<  std::endl;
+     initQuda(-1);
+   }
 #  endif
 #endif
 

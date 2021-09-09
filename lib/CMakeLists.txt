@@ -233,6 +233,7 @@ set(ChromaLIB_HEADERS
 	actions/gauge/gaugestates/simple_gaugestate.h
 	actions/gauge/gaugestates/stout_gaugestate.h
 	init/chroma_init.h
+	init/local_rank.h
 	io/io.h
 	io/xmllog_io.h
 	io/enum_io/enum_io.h
@@ -323,6 +324,7 @@ set(ChromaLIB_HEADERS
 	meas/hadron/barQll_w.h
     meas/hadron/heavy_hadrons_su3_w.h
 	meas/hadron/heavy_hadron_potentials_w.h
+	meas/hadron/greedy_coloring.h
 	meas/hadron/spin_insertion.h
 	meas/hadron/spin_insertion_factory.h
     meas/hadron/spin_insertion_aggregate.h
@@ -969,6 +971,7 @@ list(APPEND ChromaLIB_HEADERS
 	meas/inline/hadron/inline_prop_3pt_w.h
 	meas/inline/hadron/inline_create_colorvecs.h
 	meas/inline/hadron/inline_disco_w.h
+	meas/inline/hadron/inline_disco_prob_defl_w.h
 	meas/inline/hadron/inline_disco_eoprec_w.h
 	meas/inline/hadron/inline_disco_eigcg_w.h
 	meas/inline/hadron/inline_disco_eo_eigcg_w.h
@@ -1113,6 +1116,7 @@ target_sources(chromalib PRIVATE
     actions/ferm/invert/minvsumr.cc 
 	actions/ferm/invert/minv_rel_cg.cc 
 	actions/ferm/invert/minv_rel_sumr.cc 
+	actions/ferm/invert/minvmr.cc
 	actions/ferm/invert/reliable_bicgstab.cc 
 	actions/ferm/invert/reliable_ibicgstab.cc 
 	actions/ferm/invert/reliable_cg.cc 
@@ -1223,6 +1227,7 @@ target_sources(chromalib PRIVATE
 	actions/gauge/gaugestates/simple_gaugestate.cc 
 	actions/gauge/gaugestates/stout_gaugestate.cc 
 	init/chroma_init.cc 
+	init/local_rank.cc
 	io/eigen_io.cc 
 	io/monomial_io.cc 
     io/enum_io/enum_cfgtype_io.cc 
@@ -1299,6 +1304,7 @@ target_sources(chromalib PRIVATE
 	meas/hadron/barQll_w.cc 
 	meas/hadron/heavy_hadron_potentials_w.cc
 	meas/hadron/heavy_hadrons_su3_w.cc
+	meas/hadron/greedy_coloring.cc
     meas/hadron/spin_insertion_aggregate.cc 
     meas/hadron/no_spin_insertion.cc 
 	meas/hadron/stoch_var.cc 
@@ -1732,6 +1738,7 @@ target_sources(chromalib PRIVATE
 	meas/inline/hadron/inline_prop_3pt_w.cc 
 	meas/inline/hadron/inline_create_colorvecs.cc 
 	meas/inline/hadron/inline_disco_w.cc 
+	meas/inline/hadron/inline_disco_prob_defl_w.cc
 	meas/inline/hadron/inline_disco_eoprec_w.cc 
 	meas/inline/hadron/inline_disco_eigcg_w.cc 
 	meas/inline/hadron/inline_disco_eo_eigcg_w.cc 
@@ -1909,6 +1916,15 @@ if( Chroma_ENABLE_CPP_WILSON_DSLASH )
   target_link_libraries(chromalib PUBLIC CPPWilsonDslash::dslash )
 endif()
 
+#######################################################
+# JIT CLOVER/STOUTING
+#######################################################
+if( Chroma_ENABLE_JIT_CLOVER )
+  list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_jit_w.h)
+  target_sources(chromalib PRIVATE util/gauge/stout_utils_jit.cc)
+endif()
+
+
 ########################################################
 #  QUDA
 ########################################################
@@ -1982,7 +1998,9 @@ foreach( file ${ChromaLIB_HEADERS})
   install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/${file} DESTINATION include/${basedir} )
 endforeach()
 
-
+if (QDP_IS_QDPJIT)
+  set_target_properties( chromalib PROPERTIES CXX_STANDARD 20 )
+endif()
  
 ##############################################
 # Install the library and the targets

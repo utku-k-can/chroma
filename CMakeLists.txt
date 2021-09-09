@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(Chroma VERSION 3.44.1 LANGUAGES CXX C Fortran)
+project(Chroma VERSION 3.44.1 LANGUAGES CXX C)
 include(FindOpenMP)
 
 option(Chroma_ENABLE_CPP_WILSON_DSLASH "Use CPP Dslash for efficiecy" OFF)
@@ -11,7 +11,7 @@ option(Chroma_ENABLE_SANITIZERS "Enable memory and address sanitizers" OFF)
 #koption(Chroma_ENABLE_LLVM_WILSON_DSLASH "Use LLVM Based Wilson Dslash (QDP-JIT builds only)" OFF)
 #option(Chroma_ENABLE_STATIC_PACKED_GAUGE "Use static space for packed gauges" OFF)
 #option(Chroma_ENABLE_SSED_CLOVER "Use SSE Double Prec for Clover Op" OFF)
-#option(Chroma_ENABLE_JIT_CLOVER "Use JIT-ed Clover Operator (QDP-JIT builds only" OFF)
+option(Chroma_ENABLE_JIT_CLOVER "Use JIT-ed Clover Operator (QDP-JIT builds only" OFF)
 #option(Chroma_ENABLE_QUDA_DEVICE_INTERFACE "Use Device Interfae with QUDA (QDP-JIT Builds only)" OFF)
 #option(Chroma_ENABLE_JIT_CONTRACTION_KERNELS "Enable JIT-ed Contraction kernels (QDP-JIT Builds only)" OFF)
 #option(Chroma_ENABLE_OPT_EIGCG "Enable EigCG Solver" OFF)
@@ -53,6 +53,11 @@ option(Chroma_USE_MGPROTO "Use the MGProto Multigrid solver" OFF)
 ##################
 # Configuration
 ##################
+
+if( Chroma_ENABLE_JIT_CLOVER )
+ set(BUILD_JIT_CLOVER_TERM 1)
+endif()
+
 
 # SSE3 automatically sets SSE2
 if( Chroma_ENABLE_SSE3 )
@@ -132,6 +137,17 @@ if( Chroma_ENABLE_QUDA )
   message(STATUS "Enabling QUDA")
   set(BUILD_QUDA 1)
   find_package(QUDA REQUIRED)
+  if( QUDA_TARGET_CUDA )
+    set(CHROMA_TARGET_CUDA 1)
+  elseif( QUDA_TARGET_HIP )
+    set(CHROMA_TARGET_HIP 1)
+  endif()
+  if (QDP_IS_QDPJIT)
+     message(STATUS "QDP is QDPJIT so enabling QDPJIT Interfaces")
+     set(BUILD_QUDA_DEVIFACE_CLOVER 1)
+     set(BUILD_QUDA_DEVIFACE_GAUGE 1)
+     set(BUILD_QUDA_DEVIFACE_SPINOR 1)
+  endif()
 endif()
 
 ###########################
@@ -196,11 +212,11 @@ configure_package_config_file(ChromaConfig.cmake.in ChromaConfig.cmake
                               INSTALL_DESTINATION lib/cmake/Chroma)
 
 write_basic_package_version_file(
-    ChromaVersion.cmake
+	ChromaConfigVersion.cmake
     VERSION ${PACKAGE_VERSION}
     COMPATIBILITY AnyNewerVersion
     )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ChromaVersion.cmake
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ChromaConfigVersion.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/ChromaConfig.cmake
               DESTINATION lib/cmake/Chroma)
