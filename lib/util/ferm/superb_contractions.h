@@ -374,15 +374,21 @@ namespace Chroma
 	  if (!cudactx)
 	  {
 	    int dev = -1;
+#ifdef SUPERBBLAS_USE_CUDA
 	    superbblas::detail::cudaCheck(cudaGetDevice(&dev));
+#elif defined(SUPERBBLAS_USE_HIP)
+	    superbblas::detail::hipCheck(hipGetDevice(&dev));
+#else
+#error superbblas was not build with support for GPUs
+#endif
 	    // Workaround on a potential issue in qdp-jit: avoid passing through the pool allocator
 	    if (jit_config_get_max_allocation() == 0)
 	    {
-	      cudactx = std::make_shared<superbblas::Context>(superbblas::createCudaContext(dev));
+	      cudactx = std::make_shared<superbblas::Context>(superbblas::createGpuContext(dev));
 	    }
 	    else
 	    {
-	      cudactx = std::make_shared<superbblas::Context>(superbblas::createCudaContext(
+	      cudactx = std::make_shared<superbblas::Context>(superbblas::createGpuContext(
 		dev,
 
 		// Make superbblas use the same memory allocator for gpu as any other qdp-jit lattice object
@@ -1639,22 +1645,22 @@ namespace Chroma
 #  endif
     };
 
-    inline void* getQDPPtrFromId(int id)
-    {
-#  ifdef QDP_IS_QDPJIT
-      std::vector<QDPCache::ArgKey> v(id, 1);
-      return QDP_get_global_cache().get_kernel_args(v, false)[0];
-#  else
-      return nullptr;
-#  endif
-    }
+//     inline void* getQDPPtrFromId(int id)
+//     {
+// #  ifdef QDP_IS_QDPJIT
+//       std::vector<QDPCache::ArgKey> v(id, 1);
+//       return QDP_get_global_cache().get_kernel_args(v, false)[0];
+// #  else
+//       return nullptr;
+// #  endif
+//     }
 
     template <typename T>
     void* getQDPPtr(const T& t)
     {
 #  ifdef QDP_IS_QDPJIT
       std::vector<QDPCache::ArgKey> v(1, t.getId());
-      void* r = QDP_get_global_cache().get_kernel_args(v, false)[0];
+      void* r = QDP_get_global_cache().get_dev_ptrs(v)[0];
       assert(superbblas::detail::getPtrDevice(r) >= 0);
       return r;
 #  else

@@ -1405,7 +1405,7 @@ namespace Chroma
 		open_db(g5_con.p->procRank(), g5_con.p->numProcs());
 
 		// Create a thread to store the tensor while doing other things
-		store_db_th = std::thread([=, &qdp_db, &qdp4_db, &gammas, &disps, &phases]() {
+		store_db_th = std::thread([=, this, &qdp_db, &qdp4_db, &gammas, &disps, &phases]() {
 		  try
 		  {
 		    double t0 = -SB::w_time();
