@@ -190,9 +190,10 @@ if( Chroma_ENABLE_SUPERBBLAS )
      find_package(HIP REQUIRED)
      execute_process(
                  COMMAND ${HIP_HIPCONFIG_EXECUTABLE} -C
-                 OUTPUT_VARIABLE _hip_cpp_config
+                 OUTPUT_VARIABLE _hip_cpp_config_raw
                  OUTPUT_STRIP_TRAILING_WHITESPACE
                  )
+     separate_arguments(_hip_cpp_config UNIX_COMMAND ${_hip_cpp_config_raw})
      message(STATUS "HIP cpp_config ${_hip_cpp_config}")
      set(HIP_CPP_CONFIG ${_hip_cpp_config} CACHE STRING "HIP cpp_config as computed by hipconfig")
      mark_as_advanced(HIP_CPP_CONFIG)
