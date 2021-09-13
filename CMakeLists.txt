@@ -186,6 +186,10 @@ add_subdirectory(other_libs/qdp-lapack)
 ###########################
 if( Chroma_ENABLE_SUPERBBLAS )
   message(STATUS "Enabling superbblas")
+
+  include(FindBLAS)
+  find_package(BLAS REQUIRED)
+  
   if( QDP_BACKEND_ROCM AND NOT HIP_CPP_CONFIG )
      find_package(HIP REQUIRED)
      execute_process(

@@ -2003,8 +2003,9 @@ if( Chroma_ENABLE_SUPERBBLAS )
   target_link_libraries(chromalib PUBLIC superbblas )
   if( QDP_BACKEND_ROCM )
      target_compile_options(chromalib PUBLIC ${HIP_CPP_CONFIG})
-     target_link_libraries(chromalib PUBLIC roc::hipblas)	
+     target_link_libraries(superbblas INTERFACE roc::hipblas)
   endif()
+  target_link_libraries(superbblas INTERFACE BLAS::BLAS)
 endif()
 
 
