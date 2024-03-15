@@ -53,6 +53,10 @@ namespace Chroma
       readGauge(gauge_file_xml, gauge_xml, u, cfg.cfg_file, QDPIO_SERIAL);
       break;
 
+    case CFG_TYPE_ILDG:
+      readGaugeILDG(gauge_file_xml, gauge_xml, u, cfg.cfg_file, QDPIO_SERIAL);
+      break;
+
     case CFG_TYPE_NERSC:
       readArchiv(gauge_xml, u, cfg.cfg_file);
       break;

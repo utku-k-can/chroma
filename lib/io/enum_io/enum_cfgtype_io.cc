@@ -19,6 +19,7 @@ namespace Chroma {
       success &= theCfgTypeMap::Instance().registerPair( std::string("SCIDAC"), CFG_TYPE_SCIDAC );
       success &= theCfgTypeMap::Instance().registerPair( std::string("SZIN" ), CFG_TYPE_SZIN );
       success &= theCfgTypeMap::Instance().registerPair( std::string("SZINQIO"), CFG_TYPE_SZINQIO );
+            success &= theCfgTypeMap::Instance().registerPair( std::string("ILDG"), CFG_TYPE_ILDG );
       
       success &= theCfgTypeMap::Instance().registerPair( std::string("KYU"), CFG_TYPE_KYU );
       success &= theCfgTypeMap::Instance().registerPair( std::string("WUP"), CFG_TYPE_WUPP);

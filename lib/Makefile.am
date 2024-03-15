@@ -111,6 +111,10 @@ nobase_include_HEADERS = \
 	actions/ferm/invert/syssolver_linop_ibicgstab.h \
 	actions/ferm/invert/syssolver_linop_mr.h \
 	actions/ferm/invert/syssolver_linop_fgmres_dr.h \
+	actions/ferm/invert/syssolver_linop_rel_bicgstab_slrc_feynhell_qcdsf.h \
+	actions/ferm/invert/syssolver_linop_rel_bicgstab_slrc_qcdsf.h \
+	actions/ferm/invert/syssolver_rel_bicgstab_slrc_feynhell_params_qcdsf.h \
+	actions/ferm/invert/syssolver_rel_bicgstab_slrc_params_qcdsf.h \
 	actions/ferm/invert/syssolver_mdagm_cg.h \
 	actions/ferm/invert/syssolver_mdagm_bicgstab.h \
 	actions/ferm/invert/syssolver_mdagm_ibicgstab.h \
@@ -221,8 +225,10 @@ nobase_include_HEADERS = \
         io/enum_io/enum_stochsrc_io.h\
         io/aniso_io.h io/cfgtype_io.h io/eigen_io.h \
 	io/gauge_io.h io/kyugauge_io.h io/readwupp.h \
+	io/gauge_lemon_io.h io/lemon_util.h io/propagator_lemon_io.h \
         io/milc_io.h io/param_io.h io/qprop_io.h io/readmilc.h \
-        io/readcppacs.h io/cppacs_io.h \
+	qprop_qcdsf_io.h \
+	io/readcppacs.h io/cppacs_io.h \
 	io/readszin.h io/szin_io.h \
         io/writemilc.h io/writeszin.h \
 	io/monomial_io.h \
@@ -357,6 +363,8 @@ nobase_include_HEADERS = \
 	util/gauge/szin_gauge_init.h \
 	util/gauge/szinqio_gauge_init.h \
 	util/gauge/kyu_gauge_init.h \
+	util/gauge/ildg_gauge_init.h \
+	util/gauge/ildg_lemon_gauge_init.h \
 	util/gauge/disordered_gauge_init.h \
 	util/gauge/unit_gauge_init.h \
 	util/gauge/cppacs_gauge_init.h \
@@ -476,6 +484,10 @@ nobase_include_HEADERS += \
 	actions/ferm/fermacts/nef_fermact_params_w.h \
 	actions/ferm/fermacts/eoprec_slic_fermact_w.h \
 	actions/ferm/fermacts/eoprec_slrc_fermact_w.h \
+	actions/ferm/fermacts/eoprec_slrc_feynhell_fermact_w.h \
+	actions/ferm/fermacts/slrc_feynhell_fermact_params_w.h \
+	actions/ferm/fermacts/unprec_slrc_fermact_w.h \
+	actions/ferm/fermacts/unprec_slrc_feynhell_fermact_w.h \
 	actions/ferm/fermacts/eoprec_clover_extfield_fermact_w.h \
 	actions/ferm/fermacts/overlap_fermact_base_w.h \
 	actions/ferm/fermacts/eoprec_dwf_fermact_array_w.h \
@@ -612,6 +624,12 @@ nobase_include_HEADERS += \
 	actions/ferm/linop/polprec_op.h \
 	actions/ferm/linop/eoprec_slic_linop_w.h \
 	actions/ferm/linop/eoprec_slrc_linop_w.h \
+	actions/ferm/linop/eoprec_slrc_dumb_linop_w_qcdsf.h \
+	actions/ferm/linop/eoprec_slrc_feynhell_dumb_linop_w_qcdsf.h \
+	actions/ferm/linop/eoprec_slrc_feynhell_linop_w.h \
+	actions/ferm/linop/unprec_slrc_feynhell_dumb_linop_w.h \
+	actions/ferm/linop/unprec_slrc_feynhell_linop_w.h \
+	actions/ferm/linop/unprec_slrc_linop_w.h \
 	actions/ferm/linop/central_tprec_nospin_utils.h \
 	actions/ferm/linop/unprec_s_cprec_t_wilson_linop_w.h \
 	actions/ferm/linop/iluprec_s_cprec_t_wilsonlike_linop_w.h \
@@ -646,6 +664,10 @@ nobase_include_HEADERS += \
 	meas/hadron/group_baryon_operator_w.h \
 	meas/hadron/barhqlq_w.h meas/hadron/baryon_w.h \
 	meas/hadron/BuildingBlocks_w.h \
+	meas/hadron/rms_w.h \
+	meas/hadron/barhqlq_qcdsf_w.h \
+	meas/hadron/mesons2_qcdsf_w.h \
+	meas/hadron/formfac_qcdsf_w.h \
         meas/hadron/curcor2_w.h \
         meas/hadron/curcor3_w.h \
         meas/hadron/formfac_w.h \
@@ -907,6 +929,13 @@ nobase_include_HEADERS += \
         meas/inline/hadron/inline_qqq_diquark_w.h \
 	meas/inline/hadron/inline_qqbar_w.h \
 	meas/inline/hadron/inline_bar3ptfn_w.h \
+	meas/inline/hadron/inline_rms_w.h \
+	meas/inline/hadron/inline_barspec_qcdsf_w.h \
+	meas/inline/hadron/inline_messpec_qcdsf_w.h \
+	meas/inline/hadron/inline_resmear_sink_qcdsf_w.h \
+	meas/inline/hadron/inline_resmear_source_qcdsf_w.h \
+	meas/inline/hadron/inline_seqsource_qcdsf_w.h \
+	meas/inline/hadron/inline_bar3ptfn_qcdsf_w.h \
 	meas/inline/hadron/inline_barspec_db_w.h \
 	meas/inline/hadron/inline_building_blocks_w.h \
 	meas/inline/hadron/inline_noisy_building_blocks_w.h \
@@ -1148,6 +1177,10 @@ libchroma_a_SOURCES = \
 	actions/ferm/invert/syssolver_linop_rel_bicgstab_clover.cc \
 	actions/ferm/invert/syssolver_linop_rel_ibicgstab_clover.cc \
 	actions/ferm/invert/syssolver_linop_rel_cg_clover.cc \
+	actions/ferm/invert/syssolver_linop_rel_bicgstab_slrc_feynhell_qcdsf.cc \
+	actions/ferm/invert/syssolver_linop_rel_bicgstab_slrc_qcdsf.cc \
+	actions/ferm/invert/syssolver_rel_bicgstab_slrc_feynhell_params_qcdsf.cc \
+	actions/ferm/invert/syssolver_rel_bicgstab_slrc_params_qcdsf.cc \
 	actions/ferm/invert/syssolver_mdagm_cg.cc \
 	actions/ferm/invert/syssolver_mdagm_bicgstab.cc \
 	actions/ferm/invert/syssolver_mdagm_ibicgstab.cc \
@@ -1255,9 +1288,11 @@ libchroma_a_SOURCES = \
         io/enum_io/enum_stochsrc_io.cc \
         io/aniso_io.cc io/cfgtype_io.cc \
 	io/gauge_io.cc io/kyugauge_io.cc io/kyuqprop_io.cc \
+	io/gauge_lemon_io.cc io/lemon_util.cc io/propagator_lemon_io.cc \
 	io/milc_io.cc io/overlap_state_info.cc \
         io/readcppacs.cc io/cppacs_io.cc\
 	io/param_io.cc io/qprop_io.cc io/readmilc.cc \
+	io/qprop_qcdsf_io.cc \
 	io/readszin.cc io/szin_io.cc \
 	io/writemilc.cc io/writeszin.cc \
         io/readwupp.cc \
@@ -1360,6 +1395,8 @@ libchroma_a_SOURCES = \
 	util/gauge/szin_gauge_init.cc \
 	util/gauge/szinqio_gauge_init.cc \
 	util/gauge/kyu_gauge_init.cc \
+	util/gauge/ildg_gauge_init.cc \
+	util/gauge/ildg_lemon_gauge_init.cc \
 	util/gauge/disordered_gauge_init.cc \
         util/gauge/wupp_gauge_init.cc \
 	util/gauge/unit_gauge_init.cc \
@@ -1427,6 +1464,13 @@ libchroma_a_SOURCES = \
 if BUILD_GMP_REMEZ
 nobase_include_HEADERS += update/molecdyn/monomial/remez_gmp.h
 libchroma_a_SOURCES += update/molecdyn/monomial/remez_gmp.cc
+endif
+
+if COMPILE_DDS
+nobase_include_HEADERS += 	actions/ferm/invert/syssolver_dds_params.h \
+	actions/ferm/invert/syssolver_linop_dds.h
+libchroma_a_SOURCES += 	actions/ferm/invert/syssolver_dds_params.cc \
+	actions/ferm/invert/syssolver_linop_dds.cc
 endif
 
 if BUILD_QUDA
@@ -1530,6 +1574,10 @@ libchroma_a_SOURCES += \
 	actions/ferm/fermacts/nef_fermact_params_w.cc \
 	actions/ferm/fermacts/eoprec_slic_fermact_w.cc \
 	actions/ferm/fermacts/eoprec_slrc_fermact_w.cc \
+	actions/ferm/fermacts/eoprec_slrc_feynhell_fermact_w.cc \
+	actions/ferm/fermacts/slrc_feynhell_fermact_params_w.cc \
+	actions/ferm/fermacts/unprec_slrc_fermact_w.cc \
+	actions/ferm/fermacts/unprec_slrc_feynhell_fermact_w.cc \
 	actions/ferm/fermacts/eoprec_clover_extfield_fermact_w.cc \
 	actions/ferm/fermacts/unprec_dwftransf_fermact_w.cc \
 	actions/ferm/fermacts/unprec_dwf_fermact_array_w.cc \
@@ -1627,6 +1675,12 @@ libchroma_a_SOURCES += \
 	actions/ferm/linop/eoprec_clover_extfield_linop_w.cc \
 	actions/ferm/linop/eoprec_slic_linop_w.cc \
 	actions/ferm/linop/eoprec_slrc_linop_w.cc \
+	actions/ferm/linop/eoprec_slrc_dumb_linop_w_qcdsf.cc \
+	actions/ferm/linop/eoprec_slrc_feynhell_dumb_linop_w_qcdsf.cc \
+	actions/ferm/linop/eoprec_slrc_feynhell_linop_w.cc \
+	actions/ferm/linop/unprec_slrc_feynhell_dumb_linop_w.cc \
+	actions/ferm/linop/unprec_slrc_feynhell_linop_w.cc \
+	actions/ferm/linop/unprec_slrc_linop_w.cc \
 	actions/ferm/linop/unprec_s_cprec_t_wilson_linop_w.cc \
 	actions/ferm/linop/iluprec_s_cprec_t_wilson_linop_w.cc \
 	actions/ferm/linop/iluprec_s_cprec_t_clover_linop_w.cc \
@@ -1655,6 +1709,10 @@ libchroma_a_SOURCES += \
         meas/hadron/simple_hadron_operator_w.cc \
         meas/hadron/group_baryon_operator_w.cc \
 	meas/hadron/baryon_w.cc meas/hadron/BuildingBlocks_w.cc \
+	meas/hadron/rms_w.cc \
+	meas/hadron/barhqlq_qcdsf_w.cc \
+	meas/hadron/mesons2_qcdsf_w.cc \
+	meas/hadron/formfac_qcdsf_w.cc \
 	meas/hadron/curcor2_w.cc \
 	meas/hadron/curcor3_w.cc \
 	meas/hadron/formfac_w.cc \
@@ -1870,6 +1928,13 @@ libchroma_a_SOURCES += \
 	meas/inline/hadron/inline_npr_vertex_w.cc \
 	meas/inline/hadron/inline_npr_w.cc \
 	meas/inline/hadron/inline_stag_to_wils.cc \
+	meas/inline/hadron/inline_rms_w.cc \
+	meas/inline/hadron/inline_barspec_qcdsf_w.cc \
+	meas/inline/hadron/inline_messpec_qcdsf_w.cc \
+	meas/inline/hadron/inline_resmear_sink_qcdsf_w.cc \
+	meas/inline/hadron/inline_resmear_source_qcdsf_w.cc \
+	meas/inline/hadron/inline_seqsource_qcdsf_w.cc \
+	meas/inline/hadron/inline_bar3ptfn_qcdsf_w.cc \
 	meas/inline/hadron/inline_barspec_db_w.cc \
 	meas/inline/hadron_s/inline_hadron_aggregate_s.cc \
 	meas/inline/hadron_s/inline_make_source_s.cc \

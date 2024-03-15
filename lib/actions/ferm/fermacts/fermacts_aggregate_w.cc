@@ -12,6 +12,8 @@
 #include "actions/ferm/fermacts/unprec_hamberwu_fermact_w.h"
 #include "actions/ferm/fermacts/unprec_dwftransf_fermact_w.h"
 #include "actions/ferm/fermacts/unprec_w12_fermact_w.h"
+#include "actions/ferm/fermacts/unprec_slrc_fermact_w.h"
+#include "actions/ferm/fermacts/unprec_slrc_feynhell_fermact_w.h"
 
 #include "actions/ferm/fermacts/eoprec_clover_fermact_w.h"
 #include "actions/ferm/fermacts/eoprec_clover_orbifold_fermact_w.h"
@@ -31,6 +33,7 @@
 #include "actions/ferm/fermacts/ilu2prec_s_cprec_t_clover_fermact_w.h"
 #include "actions/ferm/fermacts/eo3dprec_s_cprec_t_wilson_fermact_w.h"
 #include "actions/ferm/fermacts/eo3dprec_s_cprec_t_clover_fermact_w.h"
+#include "actions/ferm/fermacts/eoprec_slrc_feynhell_fermact_w.h"
 
 #include "actions/ferm/fermacts/ovlap_partfrac4d_fermact_w.h"
 
@@ -105,6 +108,10 @@ namespace Chroma
 	success &= EvenOddPrecCloverOrbifoldFermActEnv::registerAll();
 	success &= EvenOddPrecSLICFermActEnv::registerAll();
 	success &= EvenOddPrecSLRCFermActEnv::registerAll();
+	success &= UnprecSLRCFermActEnv::registerAll();
+	success &= UnprecSLRCFeynHellFermActEnv::registerAll();
+
+	success &= EvenOddPrecSLRCFeynHellEnv::registerAll();
 	
 //      success &= EvenOddPrecCloverExtFieldFermActEnv::registerAll();
 

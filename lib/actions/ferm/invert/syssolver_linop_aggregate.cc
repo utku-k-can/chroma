@@ -15,10 +15,15 @@
 #include "actions/ferm/invert/syssolver_linop_eigbicg.h"
 #include "actions/ferm/invert/syssolver_linop_richardson_multiprec_clover.h"
 #include "actions/ferm/invert/syssolver_linop_rel_bicgstab_clover.h"
+#include "actions/ferm/invert/syssolver_linop_rel_bicgstab_slrc_qcdsf.h"
+#include "actions/ferm/invert/syssolver_linop_rel_bicgstab_slrc_feynhell_qcdsf.h"
 #include "actions/ferm/invert/syssolver_linop_rel_ibicgstab_clover.h"
 #include "actions/ferm/invert/syssolver_linop_rel_cg_clover.h"
 #include "actions/ferm/invert/syssolver_linop_fgmres_dr.h"
 
+#ifdef COMPILE_DDS
+#include "actions/ferm/invert/syssolver_linop_dds.h"
+#endif
 
 #include "chroma_config.h"
 #ifdef BUILD_QUDA
@@ -82,8 +87,14 @@ namespace Chroma
 	success &= LinOpSysSolverRichardsonCloverEnv::registerAll();
 	success &= LinOpSysSolverReliableBiCGStabCloverEnv::registerAll();
 	success &= LinOpSysSolverReliableIBiCGStabCloverEnv::registerAll();
+	success &= LinOpSysSolverReliableBiCGStabSlrcEnvQCDSF::registerAll();
+	success &= LinOpSysSolverReliableBiCGStabSlrcFeynHellEnvQCDSF::registerAll();
 	success &= LinOpSysSolverReliableCGCloverEnv::registerAll();
 	success &= LinOpSysSolverFGMRESDREnv::registerAll();
+
+#ifdef COMPILE_DDS
+	success &= LinOpSysSolverDDSEnv::registerAll();
+#endif
 
 #ifdef BUILD_QUDA
 	success &= LinOpSysSolverQUDACloverEnv::registerAll();

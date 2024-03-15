@@ -15,12 +15,16 @@
 #include "unprec_wilson_fermact_w.h"
 #include "unprec_parwilson_fermact_w.h"
 #include "unprec_clover_fermact_w.h"
+#include "unprec_slrc_fermact_w.h"
+#include "unprec_slrc_feynhell_fermact_w.h"
 
 #include "eoprec_wilson_fermact_w.h"
 #include "eoprec_parwilson_fermact_w.h"
 #include "eoprec_clover_fermact_w.h"
 #include "eoprec_slic_fermact_w.h"
 #include "eoprec_slrc_fermact_w.h"
+
+#include "eoprec_slrc_feynhell_fermact_w.h"
 
 #include "unprec_s_cprec_t_wilson_fermact_w.h"
 #include "iluprec_s_cprec_t_wilson_fermact_w.h"
